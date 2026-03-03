@@ -1,5 +1,7 @@
 # Dependências
 node_modules/
+dist/
+build/
 
 # NOTA: A pasta "Twitch Chat Overlay-win32-x64" NÃO é ignorada
 # pois contém o executável distribuído para os usuários
