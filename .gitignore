@@ -1,0 +1,14 @@
+# Dependências
+node_modules/
+
+# NOTA: A pasta "Twitch Chat Overlay-win32-x64" NÃO é ignorada
+# pois contém o executável distribuído para os usuários
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Arquivos do S.O.
+.DS_Store
+Thumbs.db

@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Overlay Twitch - Config</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #18181B;
+            color: #EFEFF1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 30px 20px;
+            margin: 0;
+        }
+
+        h1 {
+            font-size: 24px;
+            color: #9146FF;
+            margin-bottom: 30px;
+        }
+
+        .input-group {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        label {
+            margin-bottom: 10px;
+            font-size: 14px;
+            color: #bfbfbf;
+        }
+
+        input {
+            padding: 12px;
+            width: 80%;
+            border: 1px solid #3A3A3D;
+            border-radius: 6px;
+            background-color: #0E0E10;
+            color: white;
+            font-size: 16px;
+            text-align: center;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #9146FF;
+        }
+
+        select {
+            padding: 12px;
+            width: 80%;
+            border: 1px solid #3A3A3D;
+            border-radius: 6px;
+            background-color: #0E0E10;
+            color: white;
+            font-size: 16px;
+            text-align: center;
+            margin-top: 5px;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #9146FF;
+        }
+
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            transition: background-color 0.2s;
+            width: 60%;
+        }
+
+        #startBtn {
+            background-color: #9146FF;
+            color: white;
+        }
+
+        #startBtn:hover {
+            background-color: #772ce8;
+        }
+
+        #stopBtn {
+            background-color: #E02828;
+            color: white;
+            display: none;
+        }
+
+        #stopBtn:hover {
+            background-color: #c02020;
+        }
+
+        .hint {
+            margin-top: 40px;
+            font-size: 12px;
+            color: #9b9b9b;
+            text-align: center;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Chat Overlay</h1>
+
+    <div class="input-group">
+        <label for="channelInput">Seu canal da Twitch</label>
+        <input type="text" id="channelInput" placeholder="ex: gaules" />
+    </div>
+
+    <div style="display: flex; flex-wrap: wrap; justify-content: space-around; width: 100%;">
+        <div class="input-group" style="width: 45%;">
+            <label for="positionSelect">Posição</label>
+            <select id="positionSelect">
+                <option value="top-left">Canto Sup. Esquerdo</option>
+                <option value="top-right">Canto Sup. Direito</option>
+                <option value="bottom-left" selected>Canto Inf. Esquerdo</option>
+                <option value="bottom-right">Canto Inf. Direito</option>
+            </select>
+        </div>
+
+        <div class="input-group" style="width: 45%;">
+            <label for="fontSizeSelect">Tamanho da Fonte</label>
+            <select id="fontSizeSelect">
+                <option value="12px">Pequena (12px)</option>
+                <option value="14px">Média (14px)</option>
+                <option value="16px" selected>Padrão (16px)</option>
+                <option value="18px">Grande (18px)</option>
+                <option value="22px">Gigante (22px)</option>
+            </select>
+        </div>
+    </div>
+
+    <div style="display: flex; flex-wrap: wrap; justify-content: space-around; width: 100%;">
+        <div class="input-group" style="width: 45%;">
+            <label for="widthInput">Largura Overlay (px)</label>
+            <input type="number" id="widthInput" value="350" />
+        </div>
+
+        <div class="input-group" style="width: 45%;">
+            <label for="heightInput">Altura Overlay (px)</label>
+            <input type="number" id="heightInput" value="600" />
+        </div>
+    </div>
+
+    <button id="startBtn">Iniciar Overlay</button>
+    <button id="stopBtn">Parar Overlay</button>
+
+    <div class="hint">
+        O chat é invisível e in-clicável para que você possa jogar 100% focado!<br><br>
+        <strong>Atenção:</strong> Deixe o seu jogo no modo "Tela Cheia em Janela" (Borderless Window) para que o overlay
+        possa sobrepô-lo.
+    </div>
+
+    <script>
+        const { ipcRenderer } = require('electron');
+
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const channelInput = document.getElementById('channelInput');
+        const positionSelect = document.getElementById('positionSelect');
+        const fontSizeSelect = document.getElementById('fontSizeSelect');
+        const widthInput = document.getElementById('widthInput');
+        const heightInput = document.getElementById('heightInput');
+
+        if (localStorage.getItem('twitchChannel')) {
+            channelInput.value = localStorage.getItem('twitchChannel');
+        }
+        if (localStorage.getItem('overlayPos')) positionSelect.value = localStorage.getItem('overlayPos');
+        if (localStorage.getItem('overlayFont')) fontSizeSelect.value = localStorage.getItem('overlayFont');
+        if (localStorage.getItem('overlayWidth')) widthInput.value = localStorage.getItem('overlayWidth');
+        if (localStorage.getItem('overlayHeight')) heightInput.value = localStorage.getItem('overlayHeight');
+
+        startBtn.addEventListener('click', () => {
+            const channel = channelInput.value.trim();
+            if (!channel) return alert('Por favor, informe o nome do canal!');
+
+            const config = {
+                channel: channel,
+                position: positionSelect.value,
+                fontSize: fontSizeSelect.value,
+                width: parseInt(widthInput.value) || 350,
+                height: parseInt(heightInput.value) || 600
+            };
+
+            localStorage.setItem('twitchChannel', config.channel);
+            localStorage.setItem('overlayPos', config.position);
+            localStorage.setItem('overlayFont', config.fontSize);
+            localStorage.setItem('overlayWidth', config.width);
+            localStorage.setItem('overlayHeight', config.height);
+
+            ipcRenderer.send('start-overlay', config);
+
+            startBtn.style.display = 'none';
+            stopBtn.style.display = 'block';
+            channelInput.disabled = true;
+            positionSelect.disabled = true;
+            fontSizeSelect.disabled = true;
+            widthInput.disabled = true;
+            heightInput.disabled = true;
+        });
+
+        stopBtn.addEventListener('click', () => {
+            ipcRenderer.send('stop-overlay');
+
+            startBtn.style.display = 'block';
+            stopBtn.style.display = 'none';
+            channelInput.disabled = false;
+            positionSelect.disabled = false;
+            fontSizeSelect.disabled = false;
+            widthInput.disabled = false;
+            heightInput.disabled = false;
+        });
+    </script>
+</body>
+
+</html>

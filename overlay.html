@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Overlay de Chat</title>
+    <style>
+        /* O mais importante: tudo transparente */
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: transparent !important;
+            overflow: hidden;
+            /* esconde scroll */
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            /* Padrao: baixo */
+            padding: 15px;
+            box-sizing: border-box;
+            background-color: rgba(0, 0, 0, 0);
+        }
+
+        #chat-container {
+            width: 100%;
+            max-height: 100%;
+            display: flex;
+            flex-direction: column;
+            overflow-y: hidden;
+        }
+
+        .message {
+            margin-top: 8px;
+            /* espaco em cima */
+            font-size: 16px;
+            font-weight: 700;
+            color: #FFFFFF;
+            /* Outlines pesados para ficar visivel num jogo branco (ex: flashbang CS) */
+            text-shadow:
+                -1.5px -1.5px 0 #000,
+                1.5px -1.5px 0 #000,
+                -1.5px 1.5px 0 #000,
+                1.5px 1.5px 0 #000,
+                0px 0px 5px rgba(0, 0, 0, 0.8);
+            word-wrap: break-word;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .username {
+            font-weight: 900;
+            margin-right: 5px;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="chat-container"></div>
+
+    <script>
+        const { ipcRenderer } = require('electron');
+        const tmi = require('tmi.js');
+
+        const chatContainer = document.getElementById('chat-container');
+        const MAX_MESSAGES = 25; // Mantém "poucas" mensagens na tela para não lotar
+
+        ipcRenderer.on('init-overlay', (event, config) => {
+            // Aplica configurações visuais
+            document.body.style.fontSize = config.fontSize;
+
+            // Alinhamento geral top/bottom
+            if (config.position.includes('top')) {
+                document.body.style.justifyContent = 'flex-start';
+                // Quando no top, queremos que as novas mensagens apareçam embaixo das velhas
+                chatContainer.style.flexDirection = 'column';
+            } else {
+                document.body.style.justifyContent = 'flex-end';
+                chatContainer.style.flexDirection = 'column';
+            }
+
+            // Alinhamento de items left/right
+            if (config.position.includes('right')) {
+                chatContainer.style.alignItems = 'flex-end';
+            } else {
+                chatContainer.style.alignItems = 'flex-start';
+            }
+
+            const client = new tmi.Client({
+                options: { debug: false },
+                connection: { reconnect: true },
+                channels: [config.channel]
+            });
+
+            client.connect().catch(console.error);
+
+            client.on('message', (channel, tags, message, self) => {
+                addMessage(tags['display-name'], tags['color'], message);
+            });
+
+            addMessage('Sistema', '#9146FF', `Conectado ao canal ${config.channel}! Boa live! 🚀`);
+        });
+
+        function addMessage(username, color, message) {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'message';
+
+            const userSpan = document.createElement('span');
+            userSpan.className = 'username';
+            userSpan.style.color = color || '#FFFFFF'; // Se usu nao tem cor, branco
+            userSpan.textContent = username + ':';
+
+            const textSpan = document.createElement('span');
+            textSpan.textContent = ' ' + message;
+
+            msgDiv.appendChild(userSpan);
+            msgDiv.appendChild(textSpan);
+
+            chatContainer.appendChild(msgDiv);
+
+            // Deleta msgs antigas para n gastar memoria nem encher a tela
+            if (chatContainer.children.length > MAX_MESSAGES) {
+                chatContainer.removeChild(chatContainer.firstChild);
+            }
+
+            // Scroll p final
+            msgDiv.scrollIntoView();
+        }
+    </script>
+</body>
+
+</html>
